@@ -9,6 +9,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+/**
+ * BBHandler class handles the ws connection and messages
+ */
 @Component
 public class BBHandler extends TextWebSocketHandler {
 

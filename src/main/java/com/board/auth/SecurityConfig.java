@@ -17,6 +17,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+/**
+ * Class that manages the security of the app
+ */
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {

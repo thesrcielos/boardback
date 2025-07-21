@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Service class thar offers utils for WS tokens
+ */
 @Service
 public class WebSocketAuthService {
 
