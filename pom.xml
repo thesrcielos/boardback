@@ -38,7 +38,8 @@
 			**/com/board/auth/WebSocketConfig*.java,
 			**/com/board/auth/user/ApplicationConfig*.java,
 			**/com/board/auth/service/GoogleService*.java,
-			**/com/board/auth/jwt/JwtUtil*.java
+			**/com/board/auth/jwt/JwtUtil*.java,
+			**/com/board/auth/user/UserRepository*.java,
 		</sonar.coverage.exclusions>
 	</properties>
 	<dependencies>
@@ -152,6 +153,7 @@
 								<exclude>com.board.auth.RedisConfig*</exclude>
 								<exclude>com.board.auth.WebSocketConfig*</exclude>
 								<exclude>com.board.auth.user.ApplicationConfig*</exclude>
+								<exclude>com.board.auth.user.UserRepository</exclude>
 								<exclude>com.board.auth.service.GoogleService*</exclude>
 								<exclude>com.board.auth.jwt.JwtUtil*</exclude>
 							</excludes>
