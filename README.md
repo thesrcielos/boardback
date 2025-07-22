@@ -86,6 +86,38 @@ Code documentation is available in `target/site/apidocs/index.html` after runnin
 mvn javadoc:javadoc
 ````
 
+## Jacoco
+
+First add the jacoco plugin to the pom.xml plugins
+
+Run the tests with
+```
+mvn clean verify
+```
+
+![](assets/1.png)
+
+Go to *target/site/jacoco/index.html* nad check the coverage
+
+![](assets/2.png)
+
+## SonarQube
+First install Sonar with docker image with the command
+```
+docker run -d --name sonarqube -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:latest
+```
+Go to localhost:9000, log in with admin admin and change the password and create a new project
+![](assets/3.png)
+Go to the project and create a token
+![](assets/4.png)
+In your pom.xml add the sonar properties
+![](assets/5.png)
+Also, you need to add the sonar plugin
+![](assets/6.png)
+Run the following command to connect with sonar
+![](assets/7.png)
+Go to your project again and look at the analysis
+![](assets/8.png)
 ## Built With
 
 * [Java 17](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)

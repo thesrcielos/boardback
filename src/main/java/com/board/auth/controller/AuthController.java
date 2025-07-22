@@ -5,6 +5,7 @@ import com.board.auth.dto.TokenDTO;
 import com.board.auth.service.AuthService;
 import com.board.auth.dto.LoginDTO;
 import com.board.auth.dto.RegisterDTO;
+import com.board.auth.service.GoogleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,10 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 public class AuthController {
     private final AuthService authService;
+    private final GoogleService googleService;
     @PostMapping("/token")
     public ResponseEntity<TokenDTO> getToken(@Valid @RequestBody CodeDTO codeDTO){
-        return ResponseEntity.ok(authService.processGoogleAuthCode(codeDTO.getCode()));
+        return ResponseEntity.ok(googleService.processGoogleAuthCode(codeDTO.getCode()));
     }
 
     @PostMapping("/login")

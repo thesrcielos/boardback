@@ -40,7 +40,7 @@ public class BBHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         System.out.println(message.getPayload());
         SocketMessage socketMessage = objectMapper.readValue(message.getPayload(), SocketMessage.class);
 
@@ -49,7 +49,7 @@ public class BBHandler extends TextWebSocketHandler {
         switch (socketMessage.getType()) {
             case "CLEAR" -> {
                 messages.clear();
-                payloadToSend = objectMapper.writeValueAsString(new SocketMessage("CLEAR", "CLEAR"));
+                payloadToSend = objectMapper.writeValueAsString(new SocketMessage("CLEAR", "CLEARMessage"));
             }
             case "BOARD" -> messages.add(payloadToSend);
             case "CHAT" -> System.out.println("Chat message: " + socketMessage.getMessage());
@@ -80,7 +80,7 @@ public class BBHandler extends TextWebSocketHandler {
         }
     }
     private String getToken(WebSocketSession session) {
-        List<String> tokens = session.getUri().getQuery() != null
+        List<String> tokens = Objects.requireNonNull(session.getUri()).getQuery() != null
                 ? Arrays.stream(session.getUri().getQuery().split("&"))
                 .filter(p -> p.startsWith("token="))
                 .map(p -> p.substring("token=".length()))
