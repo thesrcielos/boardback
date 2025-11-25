@@ -1,11 +1,10 @@
 name: DAST Security Scan (OWASP ZAP)
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   zap_authenticated_scan:
@@ -18,30 +17,22 @@ jobs:
       - name: Authenticate and obtain JWT
         id: auth
         run: |
-          echo "Calling auth endpoint..."
-          
           RESPONSE=$(curl -s -X POST \
             "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/auth/login" \
             -H "Content-Type: application/json" \
             -d "{\"email\":\"${{ secrets.ZAP_EMAIL }}\", \"password\":\"${{ secrets.ZAP_PASSWORD }}\"}")
 
-          echo "Response: $RESPONSE"
-
-          TOKEN=$(echo $RESPONSE | jq -r '.token')
+          TOKEN=$(echo "$RESPONSE" | jq -r '.token')
 
           if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
-            echo "❌ No se pudo obtener el token JWT"
+            echo "Error: Could not retrieve token"
             exit 1
           fi
 
-          echo "✔ Token obtenido con éxito"
-
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
 
-      - name: Create ZAP Context with Authorization Header
+      - name: Create headers.context
         run: |
-          echo "Adding Authorization header to context..."
-
           cat <<EOF > headers.context
           [{
             "name": "Authorization",
@@ -50,33 +41,34 @@ jobs:
           }]
           EOF
 
-          echo "✔ headers.context generado"
+          echo "Generated headers.context:"
+          cat headers.context
 
-      - name: ZAP Full Scan (Authenticated)
-        id: zap
+      - name: ZAP Authenticated Full Scan
         uses: zaproxy/action-full-scan@v0.7.0
         with:
-          target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net"
+          target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/"
           cmd_options: >
-            -a 
-            -config httpsender.default.headersFile=headers.context
-          allow_issue_writing: false
+            -a
+            -config httpsender.default.headersFile=/zap/wrk/headers.context
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         with:
           name: zap-scan-report
           path: |
-            zap-report.html
-            zap-report.md
-            zap-report.json
+            zap_report.html
+            zap_report.md
+            zap_report.json
           if-no-files-found: warn
 
-      - name: Fail if High Severity Alerts
+      - name: Fail if High Alerts
         run: |
           if grep -q "High" zap_report.md; then
-            echo "❌ Vulnerabilidades HIGH encontradas."
+            echo "❌ High severity vulnerabilities found!"
             exit 1
           else
-            echo "✔ No hay vulnerabilidades HIGH."
+            echo "✔ No high vulnerabilities."
           fi
