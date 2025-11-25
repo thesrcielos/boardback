@@ -2,14 +2,17 @@ name: DAST Security Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '0 2 * * 1' # Ejecutar cada lunes a las 2 AM
+  workflow_dispatch: # Permite ejecución manual
 
 env:
   TARGET_URL: ${{ secrets.TARGET_URL }}
-  API_EMAIL: ${{ secrets.ZAP_EMAIL }}
-  API_PASSWORD: ${{ secrets.ZAP_PASSWORD }}
+  API_USERNAME: ${{ secrets.API_USERNAME }}
+  API_PASSWORD: ${{ secrets.API_PASSWORD }}
 
 jobs:
   dast-scan:
@@ -26,7 +29,7 @@ jobs:
           RESPONSE=$(curl -s -X POST "${{ env.TARGET_URL }}/api/auth/login" \
             -H "Content-Type: application/json" \
             -d '{
-              "email": "${{ env.API_EMAIL }}",
+              "username": "${{ env.API_USERNAME }}",
               "password": "${{ env.API_PASSWORD }}"
             }')
           
@@ -41,12 +44,66 @@ jobs:
           echo "::add-mask::$JWT_TOKEN"
           echo "jwt_token=$JWT_TOKEN" >> $GITHUB_OUTPUT
 
+      - name: Crear directorio ZAP
+        run: mkdir -p .zap
+
+      - name: Crear archivo de configuración ZAP
+        run: |
+          cat > .zap/context.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <configuration>
+            <context>
+              <name>Default Context</name>
+              <desc/>
+              <inscope>true</inscope>
+              <incregexes>${{ env.TARGET_URL }}.*</incregexes>
+              <tech>
+                <include>Db</include>
+                <include>OS</include>
+                <include>Language</include>
+              </tech>
+              <urlparser>
+                <class>org.zaproxy.zap.model.StandardParameterParser</class>
+                <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+              </urlparser>
+              <postparser>
+                <class>org.zaproxy.zap.model.StandardParameterParser</class>
+                <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+              </postparser>
+              <authentication>
+                <type>0</type>
+                <strategy>EACH_RESP</strategy>
+                <pollurl/>
+                <polldata/>
+                <pollheaders/>
+                <pollfreq>60</pollfreq>
+                <pollunits>REQUESTS</pollunits>
+              </authentication>
+              <forceduser>-1</forceduser>
+              <session>
+                <type>0</type>
+              </session>
+              <authorization>
+                <type>0</type>
+                <basic>
+                  <header/>
+                  <body/>
+                  <logic>AND</logic>
+                  <code>-1</code>
+                </basic>
+              </authorization>
+            </context>
+          </configuration>
+          EOF
+
       - name: DAST con OWASP ZAP
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: ${{ env.TARGET_URL }}
-          rules_file_name: '.zap/rules.tsv'
-          cmd_options: '-a -j -config replacer.full_list(0).description=auth1 -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Authorization -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement="Bearer ${{ steps.get-jwt.outputs.jwt_token }}"'
+          cmd_options: '-a -j'
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_VALUE: Bearer ${{ steps.get-jwt.outputs.jwt_token }}
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
@@ -67,3 +124,27 @@ jobs:
               body: 'Se han detectado vulnerabilidades en el análisis DAST. Revisa el reporte en los artifacts del workflow.',
               labels: ['security', 'dast']
             })
+
+      # Alternativa: DAST con Nuclei
+      - name: Setup Nuclei
+        if: false # Cambia a true si prefieres usar Nuclei
+        run: |
+          wget -q https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei_linux_amd64.zip
+          unzip -q nuclei_linux_amd64.zip
+          sudo mv nuclei /usr/local/bin/
+          nuclei -update-templates
+
+      - name: Run Nuclei Scan
+        if: false # Cambia a true si prefieres usar Nuclei
+        run: |
+          nuclei -target ${{ env.TARGET_URL }} \
+            -header "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt_token }}" \
+            -severity critical,high,medium \
+            -json -o nuclei-results.json
+
+      - name: Upload Nuclei Results
+        if: false
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuclei-results
+          path: nuclei-results.json
