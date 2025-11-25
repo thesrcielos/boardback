@@ -1,0 +1,82 @@
+name: DAST Security Scan (OWASP ZAP)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  zap_authenticated_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Authenticate and obtain JWT
+        id: auth
+        run: |
+          echo "Calling auth endpoint..."
+          
+          RESPONSE=$(curl -s -X POST \
+            "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${{ secrets.ZAP_EMAIL }}\", \"password\":\"${{ secrets.ZAP_PASSWORD }}\"}")
+
+          echo "Response: $RESPONSE"
+
+          TOKEN=$(echo $RESPONSE | jq -r '.token')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ No se pudo obtener el token JWT"
+            exit 1
+          fi
+
+          echo "✔ Token obtenido con éxito"
+
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Create ZAP Context with Authorization Header
+        run: |
+          echo "Adding Authorization header to context..."
+
+          cat <<EOF > headers.context
+          [{
+            "name": "Authorization",
+            "value": "Bearer ${TOKEN}",
+            "enabled": true
+          }]
+          EOF
+
+          echo "✔ headers.context generado"
+
+      - name: ZAP Full Scan (Authenticated)
+        id: zap
+        uses: zaproxy/action-full-scan@v0.7.0
+        with:
+          target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/"
+          cmd_options: >
+            -a 
+            -config httpsender.default.headersFile=headers.context
+          allow_issue_writing: false
+
+      - name: Upload ZAP Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-authenticated-report
+          path: |
+            zap_report.html
+            zap_report.md
+            zap_report.json
+          if-no-files-found: warn
+
+      - name: Fail if High Severity Alerts
+        run: |
+          if grep -q "High" zap_report.md; then
+            echo "❌ Vulnerabilidades HIGH encontradas."
+            exit 1
+          else
+            echo "✔ No hay vulnerabilidades HIGH."
+          fi
