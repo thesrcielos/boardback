@@ -1,51 +1,69 @@
-name: DAST Security Scan (OWASP ZAP)
+name: DAST Security Scan
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-  workflow_dispatch:
+    branches: [ main ]
+
+env:
+  TARGET_URL: ${{ secrets.TARGET_URL }}
+  API_EMAIL: ${{ secrets.ZAP_EMAIL }}
+  API_PASSWORD: ${{ secrets.ZAP_PASSWORD }}
 
 jobs:
-  zap_authenticated_scan:
+  dast-scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Authenticate and obtain JWT
-        id: auth
+      - name: Obtener JWT Token
+        id: get-jwt
         run: |
-          RESPONSE=$(curl -s -X POST \
-            "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/auth/login" \
+          # Realizar login y obtener JWT
+          RESPONSE=$(curl -s -X POST "${{ env.TARGET_URL }}/api/auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"email\":\"${{ secrets.ZAP_EMAIL }}\", \"password\":\"${{ secrets.ZAP_PASSWORD }}\"}")
-
-          TOKEN=$(echo "$RESPONSE" | jq -r '.token')
-
-          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
-            echo "Error: Could not retrieve token"
+            -d '{
+              "email": "${{ env.API_EMAIL }}",
+              "password": "${{ env.API_PASSWORD }}"
+            }')
+          
+          # Extraer el token JWT de la respuesta
+          JWT_TOKEN=$(echo $RESPONSE | jq -r '.token // .access_token // .jwt')
+          
+          if [ -z "$JWT_TOKEN" ] || [ "$JWT_TOKEN" = "null" ]; then
+            echo "Error: No se pudo obtener el JWT token"
             exit 1
           fi
+          
+          echo "::add-mask::$JWT_TOKEN"
+          echo "jwt_token=$JWT_TOKEN" >> $GITHUB_OUTPUT
 
-          echo "ZAP_AUTH_HEADER=Authorization: Bearer $TOKEN" >> $GITHUB_ENV
-
-      - name: ZAP Authenticated Full Scan
-        uses: zaproxy/action-full-scan@v0.7.0
-        env:
-          ZAP_AUTH_HEADER: ${{ env.ZAP_AUTH_HEADER }}
+      - name: DAST con OWASP ZAP
+        uses: zaproxy/action-baseline@v0.12.0
         with:
-          name: zap-full-scan
-          target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/"
-          cmd_options: "-a"
+          target: ${{ env.TARGET_URL }}
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j -config replacer.full_list(0).description=auth1 -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Authorization -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement="Bearer ${{ steps.get-jwt.outputs.jwt_token }}"'
 
-      - name: Upload ZAP Reports
+      - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: zap-report
-          path: |
-            zap_report.html
-            zap_report.md
-            zap_report.json
-          if-no-files-found: warn
+          path: report_html.html
+
+      - name: Crear Issue si hay vulnerabilidades críticas
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Vulnerabilidades detectadas en DAST Scan',
+              body: 'Se han detectado vulnerabilidades en el análisis DAST. Revisa el reporte en los artifacts del workflow.',
+              labels: ['security', 'dast']
+            })
