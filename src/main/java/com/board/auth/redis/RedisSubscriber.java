@@ -1,6 +1,6 @@
 package com.board.auth.redis;
 
-import com.board.auth.BBHandler;
+import com.board.auth.ws.BBHandler;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;

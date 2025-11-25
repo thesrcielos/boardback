@@ -1,6 +1,6 @@
 package com.board;
 
-import com.board.auth.WebSocketAuthService;
+import com.board.auth.ws.WebSocketAuthService;
 import com.board.auth.user.Role;
 import com.board.auth.user.UserDTO;
 import com.board.auth.user.UserEntity;

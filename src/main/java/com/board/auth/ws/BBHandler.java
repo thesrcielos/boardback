@@ -1,4 +1,4 @@
-package com.board.auth;
+package com.board.auth.ws;
 
 import com.board.auth.redis.SocketMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;

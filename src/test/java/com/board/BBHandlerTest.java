@@ -1,7 +1,7 @@
 package com.board;
 
-import com.board.auth.BBHandler;
-import com.board.auth.WebSocketAuthService;
+import com.board.auth.ws.BBHandler;
+import com.board.auth.ws.WebSocketAuthService;
 import com.board.auth.redis.SocketMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,9 +13,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.net.URI;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class BBHandlerTest {

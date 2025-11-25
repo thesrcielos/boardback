@@ -1,10 +1,12 @@
-package com.board;
+package com.board.auth.controller;
 
-import com.board.auth.WebSocketAuthService;
+import com.board.auth.ws.WebSocketAuthService;
 import com.board.auth.dto.TokenDTO;
 import com.board.auth.user.UserDTO;
+import com.board.auth.user.UserEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,7 +20,8 @@ public class WebSocketAuthController {
     }
 
     @PostMapping("/token")
-    public ResponseEntity<TokenDTO> generate(@RequestParam String id) {
+    public ResponseEntity<TokenDTO> generate(@AuthenticationPrincipal UserEntity auth) {
+        String id = getUserIdFromToken(auth);
         String token = authService.generateToken(id);
         return ResponseEntity.ok(new TokenDTO(token));
     }
@@ -30,5 +33,9 @@ public class WebSocketAuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         return ResponseEntity.ok(user);
+    }
+
+    private String getUserIdFromToken(UserEntity token){
+        return token.getId();
     }
 }

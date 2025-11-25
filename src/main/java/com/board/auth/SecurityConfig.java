@@ -31,7 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity security) throws Exception {
         return security
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(c -> c.configure(security))
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests( r -> r
                         .requestMatchers("/api/auth/login","/api/auth/register","/api/auth/token", "/bbService")
                         .permitAll()

@@ -1,7 +1,7 @@
 package com.board;
 
-import com.board.WebSocketAuthController;
-import com.board.auth.WebSocketAuthService;
+import com.board.auth.controller.WebSocketAuthController;
+import com.board.auth.ws.WebSocketAuthService;
 import com.board.auth.user.UserDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

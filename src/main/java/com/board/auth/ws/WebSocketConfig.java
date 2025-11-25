@@ -1,4 +1,4 @@
-package com.board.auth;
+package com.board.auth.ws;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.*;

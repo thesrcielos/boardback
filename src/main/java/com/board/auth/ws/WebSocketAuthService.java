@@ -1,4 +1,4 @@
-package com.board.auth;
+package com.board.auth.ws;
 
 import com.board.auth.user.UserDTO;
 import com.board.auth.user.UserEntity;
