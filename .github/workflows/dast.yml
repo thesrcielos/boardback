@@ -5,9 +5,6 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  schedule:
-    - cron: '0 2 * * 1' # Ejecutar cada lunes a las 2 AM
-  workflow_dispatch: # Permite ejecución manual
 
 env:
   TARGET_URL: ${{ secrets.TARGET_URL }}
@@ -100,30 +97,96 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: ${{ env.TARGET_URL }}
-          cmd_options: '-a -j'
+          cmd_options: '-a -j -I'
         env:
           ZAP_AUTH_HEADER: Authorization
           ZAP_AUTH_HEADER_VALUE: Bearer ${{ steps.get-jwt.outputs.jwt_token }}
+        continue-on-error: true
 
-      - name: Upload ZAP Report
+      - name: Analizar resultados del escaneo
+        if: always()
+        run: |
+          if [ -f report_json.json ]; then
+            echo "### 📊 Resumen del escaneo DAST" >> $GITHUB_STEP_SUMMARY
+          
+            # Contar alertas por severidad
+            HIGH=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' report_json.json)
+            MEDIUM=$(jq '[.site[].alerts[] | select(.riskcode == "2")] | length' report_json.json)
+            LOW=$(jq '[.site[].alerts[] | select(.riskcode == "1")] | length' report_json.json)
+            INFO=$(jq '[.site[].alerts[] | select(.riskcode == "0")] | length' report_json.json)
+          
+            echo "- 🔴 **High**: $HIGH" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟠 **Medium**: $MEDIUM" >> $GITHUB_STEP_SUMMARY
+            echo "- 🟡 **Low**: $LOW" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔵 **Info**: $INFO" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          
+            # Fallar si hay vulnerabilidades críticas o altas
+            if [ "$HIGH" -gt "0" ]; then
+              echo "❌ Se encontraron vulnerabilidades de severidad ALTA" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          else
+            echo "⚠️ No se generó el reporte JSON" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-report
-          path: report_html.html
+          name: zap-security-report
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
 
       - name: Crear Issue si hay vulnerabilidades críticas
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            
+            let alertsBody = '### 🔍 Vulnerabilidades detectadas en DAST Scan\n\n';
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('report_json.json', 'utf8'));
+            
+              // Filtrar alertas de alta severidad
+              const highAlerts = [];
+              report.site.forEach(site => {
+                site.alerts.forEach(alert => {
+                  if (alert.riskcode === "3" || alert.riskcode === "2") {
+                    highAlerts.push(alert);
+                  }
+                });
+              });
+            
+              if (highAlerts.length > 0) {
+                alertsBody += '#### Vulnerabilidades encontradas:\n\n';
+                highAlerts.forEach(alert => {
+                  const severity = alert.riskcode === "3" ? "🔴 HIGH" : "🟠 MEDIUM";
+                  alertsBody += `**${severity}**: ${alert.name}\n`;
+                  alertsBody += `- **Descripción**: ${alert.desc.substring(0, 200)}...\n`;
+                  alertsBody += `- **Solución**: ${alert.solution.substring(0, 200)}...\n\n`;
+                });
+              }
+            } catch (error) {
+              alertsBody += 'No se pudo parsear el reporte. Revisa los artifacts para más detalles.\n';
+            }
+            
+            alertsBody += '\n---\n';
+            alertsBody += `**Run ID**: ${context.runId}\n`;
+            alertsBody += `**Commit**: ${context.sha.substring(0, 7)}\n`;
+            alertsBody += `[Ver reporte completo](${context.payload.repository.html_url}/actions/runs/${context.runId})`;
+            
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '🚨 Vulnerabilidades detectadas en DAST Scan',
-              body: 'Se han detectado vulnerabilidades en el análisis DAST. Revisa el reporte en los artifacts del workflow.',
-              labels: ['security', 'dast']
-            })
+              title: `🚨 Vulnerabilidades de seguridad detectadas - ${new Date().toISOString().split('T')[0]}`,
+              body: alertsBody,
+              labels: ['security', 'dast', 'vulnerability']
+            });
 
       # Alternativa: DAST con Nuclei
       - name: Setup Nuclei
