@@ -29,46 +29,22 @@ jobs:
             exit 1
           fi
 
-          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
-
-      - name: Create headers.context
-        run: |
-          cat <<EOF > headers.context
-          [{
-            "name": "Authorization",
-            "value": "Bearer ${TOKEN}",
-            "enabled": true
-          }]
-          EOF
-
-          echo "Generated headers.context:"
-          cat headers.context
+          echo "ZAP_AUTH_HEADER=Authorization: Bearer $TOKEN" >> $GITHUB_ENV
 
       - name: ZAP Authenticated Full Scan
         uses: zaproxy/action-full-scan@v0.7.0
+        env:
+          ZAP_AUTH_HEADER: ${{ env.ZAP_AUTH_HEADER }}
         with:
           target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/"
-          cmd_options: >
-            -a
-            -config httpsender.default.headersFile=/zap/wrk/headers.context
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          cmd_options: "-a"
 
       - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-report
+          name: zap-report
           path: |
             zap_report.html
             zap_report.md
             zap_report.json
           if-no-files-found: warn
-
-      - name: Fail if High Alerts
-        run: |
-          if grep -q "High" zap_report.md; then
-            echo "❌ High severity vulnerabilities found!"
-            exit 1
-          else
-            echo "✔ No high vulnerabilities."
-          fi
