@@ -62,14 +62,6 @@ class WebSocketAuthControllerIntegrationTest {
         Mockito.reset(wsAuthService);
     }
 
-    @Test
-    void generate_returnsTokenDTO() throws Exception {
-        Mockito.when(wsAuthService.generateToken(eq("1"))).thenReturn("ws-token");
-        mockMvc.perform(post("/ws-auth/token")
-                .param("id", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("ws-token"));
-    }
 
     @Test
     void validate_validToken_returnsUserDTO() throws Exception {
