@@ -36,6 +36,7 @@ jobs:
         env:
           ZAP_AUTH_HEADER: ${{ env.ZAP_AUTH_HEADER }}
         with:
+          name: zap-full-scan
           target: "https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/"
           cmd_options: "-a"
 
