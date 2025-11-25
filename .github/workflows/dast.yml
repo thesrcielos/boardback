@@ -11,8 +11,8 @@ on:
 
 env:
   TARGET_URL: ${{ secrets.TARGET_URL }}
-  API_USERNAME: ${{ secrets.API_USERNAME }}
-  API_PASSWORD: ${{ secrets.API_PASSWORD }}
+  API_USERNAME: ${{ secrets.ZAP_EMAIL }}
+  API_PASSWORD: ${{ secrets.ZAP_PASSWORD }}
 
 jobs:
   dast-scan:
@@ -29,7 +29,7 @@ jobs:
           RESPONSE=$(curl -s -X POST "${{ env.TARGET_URL }}/api/auth/login" \
             -H "Content-Type: application/json" \
             -d '{
-              "username": "${{ env.API_USERNAME }}",
+              "email": "${{ env.API_USERNAME }}",
               "password": "${{ env.API_PASSWORD }}"
             }')
           
