@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+    <name>board-api</name>
+
+    <!-- Dominio base de tu API -->
+    <hosts>
+        <host name="https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net" port="443" ssl="true"/>
+    </hosts>
+
+    <!-- Paths detectados por Swagger -->
+    <url>{"loc":"https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/auth/token"}</url>
+    <url>{"loc":"https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.netapi/auth/register"}</url>
+    <url>{"loc":"https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/auth/login"}</url>
+    <url>{"loc":"https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/ws-auth/token"}</url>
+    <url>{"loc":"https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/ws-auth/validate/sample-token"}</url>
+
+    <!-- Permitir que ZAP pueda escanearlos -->
+    <context>
+        <name>board-api-context</name>
+        <include>https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/api/.*</include>
+        <include>https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/ws-auth/.*</include>
+
+        <!-- Excluir swagger UI para no perder tiempo -->
+        <exclude>https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/swagger-ui/.*</exclude>
+        <exclude>https://boardback-ergfg6cxfudshkbz.canadacentral-01.azurewebsites.net/v3/api-docs/.*</exclude>
+
+        <!-- Seguridad (si usas JWT opcional) -->
+        <tech>JWT</tech>
+    </context>
+</site>
